@@ -1,0 +1,103 @@
+apply plugin:'application'
+
+repositories {
+    mavenCentral()
+}
+
+mainClassName = "ensemble.EnsembleApp"
+
+def FileCollection apachecp = files(
+   "./lib/lucene-core-7.1.0.jar",
+   "./lib/lucene-grouping-7.1.0.jar",
+   "./lib/lucene-queryparser-7.1.0.jar")
+
+sourceSets {
+    main {
+        java {
+            srcDirs 'src/app/java',
+                    'src/generated/java',
+                    'src/samples/java'
+        }
+        resources {
+            srcDirs 'src/app/resources',
+                    'src/generated/resources',
+                    'src/samples/resources'
+        }
+        // compileClasspath += apachecp
+    }
+}
+def getOSName() {
+    final String osName = System.getProperty("os.name").toLowerCase();
+    if (osName.contains("linux")) {
+        return ("linux");
+    } else if (osName.contains("mac os x") || osName.contains("darwin") || osName.contains("osx")) {
+        return ("mac");
+    } else if (osName.contains("windows")) {
+        return ("win");
+    }
+    return ("");
+}
+
+ext.platform = getOSName()
+
+dependencies {
+    compile "org.openjfx:javafx-controls:11-ea+19:${platform}"
+    compile "org.openjfx:javafx-graphics:11-ea+19:${platform}"
+    compile "org.openjfx:javafx-base:11-ea+19:${platform}"
+    compile "org.openjfx:javafx-fxml:11-ea+19:${platform}"
+    compile "org.openjfx:javafx-web:11-ea+19:${platform}"
+    compile "org.openjfx:javafx-media:11-ea+19:${platform}"
+    compile "org.openjfx:javafx-swing:11-ea+19:${platform}"
+    // compile "org.apache.lucene:lucene-core:7.1.0"
+    compile "org.apache.lucene:lucene-grouping:7.1.0"
+    compile "org.apache.lucene:lucene-queryparser:7.4.0"
+}
+
+
+def excludedArtifacts = configurations.compile.resolvedConfiguration.resolvedArtifacts.findAll {
+println("IT = $it with name $it.name");
+    (it.moduleVersion.id.group == 'org.openjfx' && it.classifier != platform ) || it.name == 'lucene-sandbox'
+}
+
+compileJava {
+    doFirst {
+        classpath -= files(excludedArtifacts.collect { it.file })
+        options.compilerArgs = [
+            '--module-path', classpath.asPath,
+            '--add-modules', 'javafx.controls,javafx.fxml,javafx.swing,javafx.web,lucene.queryparser'
+        ]
+        classpath = files()
+    }
+}
+
+run {
+    doFirst {
+        classpath -= files(excludedArtifacts.collect { it.file })
+        jvmArgs = [
+            '--module-path', classpath.asPath,
+            '--add-modules', 'javafx.controls,javafx.fxml,javafx.swing,javafx.web,lucene.queryparser'
+        ]
+        classpath = sourceSets.main.output
+    }
+}
+
+
+jar {
+    manifest.attributes("Main-Class": mainClassName)
+
+    // add in the sample sources....
+    from fileTree('src/samples/java')
+
+    // Note: this would be the "gradle" way to add in the Lucene jars
+    // BUT we run into total path length on Windows with the temp file in ./build
+    //apachecp.each { from zipTree(it) }
+    //exclude 'META-INF/*'
+}
+
+// Merge the Apache Lucene jars into our master jar.
+jar.doLast() {
+    ant.zip(destfile: jar.archivePath, update: true, duplicate: "preserve") {
+        zipgroupfileset(dir: new File("./lib"), includes:"*.jar")
+    }
+}
+
