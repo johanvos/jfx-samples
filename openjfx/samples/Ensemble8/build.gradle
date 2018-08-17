@@ -86,7 +86,6 @@ dependencies {
 
 
 def excludedArtifacts = configurations.compile.resolvedConfiguration.resolvedArtifacts.findAll {
-println("IT = $it with name $it.name");
     (it.moduleVersion.id.group == 'org.openjfx' && it.classifier != platform ) || it.name == 'lucene-sandbox'
 }
 
@@ -99,7 +98,8 @@ compileJava {
         classpath -= files(excludedArtifacts.collect { it.file })
         options.compilerArgs = [
             '--module-path', classpath.asPath,
-            '--add-modules', 'javafx.controls,javafx.fxml,javafx.swing,javafx.web,lucene.queryparser'
+            '--add-modules', 'javafx.controls,javafx.fxml,javafx.swing,javafx.web,lucene.queryparser',
+            '-encoding', 'UTF-8'
         ]
         classpath = files()
     }
