@@ -90,6 +90,10 @@ println("IT = $it with name $it.name");
     (it.moduleVersion.id.group == 'org.openjfx' && it.classifier != platform ) || it.name == 'lucene-sandbox'
 }
 
+def externalLibs = configurations.compile.resolvedConfiguration.resolvedArtifacts.findAll {
+    (it.name.startsWith('lucene'))
+}
+
 compileJava {
     doFirst {
         classpath -= files(excludedArtifacts.collect { it.file })
@@ -118,6 +122,9 @@ jar {
 
     // add in the sample sources....
     from fileTree('src/samples/java')
+    from (files(externalLibs.collect{it.file})) {
+        into ("lib")
+    }
 
     // Note: this would be the "gradle" way to add in the Lucene jars
     // BUT we run into total path length on Windows with the temp file in ./build
@@ -126,9 +133,9 @@ jar {
 }
 
 // Merge the Apache Lucene jars into our master jar.
-jar.doLast() {
-    ant.zip(destfile: jar.archivePath, update: true, duplicate: "preserve") {
-        zipgroupfileset(dir: new File("./lib"), includes:"*.jar")
-    }
-}
+// jar.doLast() {
+//     ant.zip(destfile: jar.archivePath, update: true, duplicate: "preserve") {
+//         zipgroupfileset(dir: new File("./lib"), includes:"*.jar")
+//     }
+// }
 
